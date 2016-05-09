@@ -1,7 +1,5 @@
 import sys
 
-import time
-
 from control_interface import ControlInterface
 
 import serial
@@ -33,6 +31,8 @@ def hex_repr(data):
 
 
 class ProcessTabletSerialCommands(object):
+    """ Read from the tablet and do appropriate event calls on control_interface
+    """
     def __init__(self, serial_port_device_name, control_interface):
         assert isinstance(control_interface, ControlInterface)
         self.control_interface = control_interface
