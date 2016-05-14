@@ -42,13 +42,16 @@ class ProcessTabletSerialCommands(object):
     def log(self, msg):
         print >> sys.stderr, msg
 
+    def stop(self):
+        self.running = False
+
     def run(self):
         self.running = True
 
         # https://pythonhosted.org/pyserial/shortintro.html#opening-serial-ports
         baudrate = 9600
 
-        self.log("Opening serial port %r at %r" % (self.serial_port_device_name, baudrate))
+        self.log("Opening serial port %r at %r bps" % (self.serial_port_device_name, baudrate))
         ser = serial.Serial()
         ser.baudrate = baudrate
         ser.port = self.serial_port_device_name
@@ -60,23 +63,22 @@ class ProcessTabletSerialCommands(object):
 
             # check which port was really used
             self.log("Serial port %r opened" % ser.name)
-            print(ser.name)
 
             # query model
             ser.write("~#")
             ser.read(2)
 
             model = read_to_cr(ser)
-            print model
+            self.log("Model string: %r" % model)
 
             # iv
             # ser_cmd(ser, "\r#")
 
             config_string = ser_cmd_w_response(ser, "~R")
-            print "Config string: %r" % config_string
+            self.log("Config string: %r" % config_string)
 
             max_coordinates = ser_cmd_w_response(ser, "~C")
-            print "Max coordinates: %r" % max_coordinates
+            self.log("Max coordinates: %r" % max_coordinates)
             max_x, max_y = [int(v) for v in max_coordinates.split(",")]
 
             # max rate
@@ -131,49 +133,62 @@ class ProcessTabletSerialCommands(object):
             last_z = None
             last_buttons = None
 
-            while self.running:
-                # read and process
-                data = ser.read(cmd_len_bytes)
+            ser.timeout = 1
 
-                # print hex_repr(data), repr(data)
+            self.log("Starting main loop")
+            self.log("Ctrl-C to exit")
 
-                if data == prev_data:
-                    continue
+            try:
 
-                prev_data = data
+                while self.running:
+                    # read and process
 
-                # data = data[1:]
+                    data = ser.read(cmd_len_bytes)
+                    while len(data) < cmd_len_bytes:
+                        data = ser.read(cmd_len_bytes - len(data))
 
-                assert ord(data[0]) & 0x80
-                top_x = ord(data[0]) & 0x03    # bits 14-15 of x
+                    # print hex_repr(data), repr(data)
 
-                high_x = ord(data[1]) & 0x7f   # bits 7-13 of x
-                low_x = ord(data[2]) & 0x7f    # bits 1-6 of x
-                x = top_x << 13 | high_x << 7 | low_x
-                buttons = ord(data[3]) & 0x78  # buttons
-                z_low = ord(data[3]) & 0x04    # lowest or 2nd lowest z bit (depending on max pressure)
+                    if data == prev_data:
+                        continue
 
-                top_y = ord(data[3]) & 0x03    # bits 14-15 of y
-                high_y = ord(data[4]) & 0x7f   # bits 7-13 of y
-                low_y = ord(data[5]) & 0x7f    # bits 1-6 of y
-                y = top_y << 13 | high_y << 7 | low_y
+                    prev_data = data
 
-                z_sign_bit = ord(data[6]) & 0x40
-                z_sign = 1 if z_sign_bit else -1
-                high_z = ord(data[6]) & 0x3f
-                z = (high_z << 1 | z_low) * z_sign
+                    # data = data[1:]
 
-                # print "x: %r y: %r buttons: %x z: %r" % (x, y, buttons, z)
+                    assert ord(data[0]) & 0x80
+                    top_x = ord(data[0]) & 0x03    # bits 14-15 of x
 
-                if (last_x, last_y) != (x, y):
-                    x_scaled = float(x) / max_x
-                    y_scaled = float(y) / max_y
-                    self.control_interface.mouse_move(x_scaled, y_scaled)
-                    last_x, last_y = x, y
+                    high_x = ord(data[1]) & 0x7f   # bits 7-13 of x
+                    low_x = ord(data[2]) & 0x7f    # bits 1-6 of x
+                    x = top_x << 13 | high_x << 7 | low_x
+                    buttons = ord(data[3]) & 0x78  # buttons
+                    z_low = ord(data[3]) & 0x04    # lowest or 2nd lowest z bit (depending on max pressure)
 
-                if (last_z, last_buttons) != (z, buttons):
-                    self.control_interface.touch_change(buttons, z)
-                    last_z, last_buttons = z, buttons
+                    top_y = ord(data[3]) & 0x03    # bits 14-15 of y
+                    high_y = ord(data[4]) & 0x7f   # bits 7-13 of y
+                    low_y = ord(data[5]) & 0x7f    # bits 1-6 of y
+                    y = top_y << 13 | high_y << 7 | low_y
+
+                    z_sign_bit = ord(data[6]) & 0x40
+                    z_sign = 1 if z_sign_bit else -1
+                    high_z = ord(data[6]) & 0x3f
+                    z = (high_z << 1 | z_low) * z_sign
+
+                    # print "x: %r y: %r buttons: %x z: %r" % (x, y, buttons, z)
+
+                    if (last_x, last_y) != (x, y):
+                        x_scaled = float(x) / max_x
+                        y_scaled = float(y) / max_y
+                        self.control_interface.mouse_move(x_scaled, y_scaled)
+                        last_x, last_y = x, y
+
+                    if (last_z, last_buttons) != (z, buttons):
+                        self.control_interface.touch_change(buttons, z)
+                        last_z, last_buttons = z, buttons
+
+            except KeyboardInterrupt:
+                self.log("Exiting")
 
         finally:
             ser.close()

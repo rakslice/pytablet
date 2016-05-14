@@ -1,7 +1,7 @@
 import argparse
 
 from control_interface import ControlInterface
-from tabletcontrol import ProcessTabletSerialCommands
+from tablet_interface import ProcessTabletSerialCommands
 
 
 def parse_args():
