@@ -95,6 +95,8 @@ class ProcessTabletSerialCommands(object):
             #  - A quirk of my USB-serial adapter
             #  - Something else
 
+            # Bump up to the new baud rate
+
             # time.sleep(0.125)
 
             # print "closing"
@@ -106,19 +108,18 @@ class ProcessTabletSerialCommands(object):
             # ser.open()
 
             # time.sleep(0.125)
-            # print "doing config again"
+            #
+            # Okay, we should be able to talk to the tablet again now
             #
             # ser.write("~#")
             # ser.read(2)
             #
-            # model = read_to_cr(ser)
-            # print model
-            #
-            # config_string = ser_cmd_w_response(ser, "~R")
-            # print "Config string: %r" % config_string
+            # model_again = read_to_cr(ser)
+            # assert(model_again == model)
             #
 
-            # pressure mode
+            # Other settings
+
             self.log("Enabling pressure mode")
             ser_cmd(ser, "PH1")
 
@@ -156,7 +157,7 @@ class ProcessTabletSerialCommands(object):
 
                     prev_data = data
 
-                    # data = data[1:]
+                    # TODO: resync rather than just failing if we get out of sync
 
                     assert ord(data[0]) & 0x80
                     top_x = ord(data[0]) & 0x03    # bits 14-15 of x
