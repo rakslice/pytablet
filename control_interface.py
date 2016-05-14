@@ -54,4 +54,3 @@ class ControlInterface(object):
                 # TODO can we combine these events into one call?
                 win32api.mouse_event(event, self.last_x, self.last_y, 0, 0)
         # print touch_state, pressure
-

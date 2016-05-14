@@ -50,7 +50,6 @@ class ProcessTabletSerialCommands(object):
 
         self.log("Opening serial port %r at %r" % (self.serial_port_device_name, baudrate))
         ser = serial.Serial()
-        # self.serial_port_device_name)  # open serial port
         ser.baudrate = baudrate
         ser.port = self.serial_port_device_name
         ser.open()
@@ -84,6 +83,15 @@ class ProcessTabletSerialCommands(object):
 
             # in principle this command is supposed to bump us up to a faster rate; not sure if it works
             ser_cmd(ser, "IT0")
+
+            # I was expecting to then have to bump up the baud rate on the serial port before issuing further commands.
+            # But not only did that not work, but actually it continued to work without doing that.
+            # I don't know if this is:
+            #  - A misunderstanding about the command
+            #  - Digitizer II not supporting a faster rate?
+            #  - A problem with pyserial
+            #  - A quirk of my USB-serial adapter
+            #  - Something else
 
             # time.sleep(0.125)
 
@@ -137,7 +145,7 @@ class ProcessTabletSerialCommands(object):
                 # data = data[1:]
 
                 assert ord(data[0]) & 0x80
-                top_x = ord(data[0]) & 0x03
+                top_x = ord(data[0]) & 0x03    # bits 14-15 of x
 
                 high_x = ord(data[1]) & 0x7f   # bits 7-13 of x
                 low_x = ord(data[2]) & 0x7f    # bits 1-6 of x
@@ -145,9 +153,9 @@ class ProcessTabletSerialCommands(object):
                 buttons = ord(data[3]) & 0x78  # buttons
                 z_low = ord(data[3]) & 0x04    # lowest or 2nd lowest z bit (depending on max pressure)
 
-                top_y = ord(data[3]) & 0x03
-                high_y = ord(data[4]) & 0x7f   # bits 7-13 of x
-                low_y = ord(data[5]) & 0x7f    # bits 1-6 of x
+                top_y = ord(data[3]) & 0x03    # bits 14-15 of y
+                high_y = ord(data[4]) & 0x7f   # bits 7-13 of y
+                low_y = ord(data[5]) & 0x7f    # bits 1-6 of y
                 y = top_y << 13 | high_y << 7 | low_y
 
                 z_sign_bit = ord(data[6]) & 0x40
