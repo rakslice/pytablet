@@ -133,6 +133,7 @@ class ProcessTabletSerialCommands(object):
             last_z = None
             last_buttons = None
 
+            # We use timeout mode so we can get KeyboardInterrupt in a sec without any tablet events happening
             ser.timeout = 1
 
             self.log("Starting main loop")
@@ -144,8 +145,9 @@ class ProcessTabletSerialCommands(object):
                     # read and process
 
                     data = ser.read(cmd_len_bytes)
+                    # could be a null or partial read due to timeout
                     while len(data) < cmd_len_bytes:
-                        data = ser.read(cmd_len_bytes - len(data))
+                        data += ser.read(cmd_len_bytes - len(data))
 
                     # print hex_repr(data), repr(data)
 
