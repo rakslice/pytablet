@@ -160,7 +160,7 @@ class ProcessTabletSerialCommands(object):
 
                     # TODO: resync rather than just failing if we get out of sync
 
-                    assert ord(data[0]) & 0x80
+                    assert ord(data[0]) & 0x80, "Leading byte of frame didn't have MSB set. Are we out of sync?"
                     top_x = ord(data[0]) & 0x03    # bits 14-15 of x
 
                     high_x = ord(data[1]) & 0x7f   # bits 7-13 of x
