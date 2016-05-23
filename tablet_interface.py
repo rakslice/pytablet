@@ -83,12 +83,13 @@ class ProcessTabletSerialCommands(object):
 
             # max rate
 
-            # in principle this command is supposed to bump us up to a faster rate; not sure if it works
+            # in principle this command is supposed to tell the tablet to switch to a faster baud rate
             ser_cmd(ser, "IT0")
 
             # I was expecting to then have to bump up the baud rate on the serial port before issuing further commands.
-            # But not only did that not work, but actually it continued to work without doing that.
-            # I don't know if this is:
+            # But actually I continued to be able to communicate without doing that, and doing that made further
+            # communications fail.
+            # I don't know if this is because of:
             #  - A misunderstanding about the command
             #  - Digitizer II not supporting a faster rate?
             #  - A problem with pyserial
